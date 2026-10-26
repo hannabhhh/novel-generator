@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨染 · 小说生成器（静态版）</title>
+<style>
+  :root{
+    --paper:#F7F1E6; --ink:#2B2620; --ink2:#6E6255; --line:#E2D8C6;
+    --card:#FFFFFF; --accent:#B4492E; --accent2:#3F5C7A; --gold:#C9A227; --chip:#F2E8D8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--paper); color:var(--ink); font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",serif; line-height:1.85; padding:0 0 60px;}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 22px;}
+  header{text-align:center; padding:44px 0 8px;}
+  header .tag{display:inline-block; font-size:12px; letter-spacing:4px; color:var(--accent); border:1px solid var(--accent); border-radius:999px; padding:4px 18px; margin-bottom:14px;}
+  header h1{font-size:30px; letter-spacing:3px;}
+  header .sub{margin-top:8px; color:var(--ink2); font-size:13px;}
+  .main{display:flex; flex-wrap:wrap; gap:20px; margin-top:26px; align-items:flex-start;}
+  .panel{flex:1 1 330px; min-width:0; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px 24px;}
+  .out{flex:1 1 560px; min-width:0;}
+  h2{font-size:16px; letter-spacing:1px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--line);}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:13px; color:var(--ink2); margin-bottom:5px; letter-spacing:1px;}
+  .field label b{color:var(--ink); font-weight:600;}
+  select,input[type=text],textarea{width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:10px; background:#FDFBF5; font-family:inherit; font-size:14px; color:var(--ink);}
+  textarea{min-height:58px; resize:vertical;}
+  .chips{display:flex; flex-wrap:wrap; gap:7px;}
+  .chips label{font-size:12.5px; color:#4A4238; background:#F6EFE2; border:1px solid var(--line); border-radius:999px; padding:3px 12px; cursor:pointer; user-select:none; display:inline-flex; align-items:center; gap:5px;}
+  .chips input{accent-color:var(--accent);}
+  .chips label.on{background:#F3E3D8; border-color:var(--accent); color:var(--accent);}
+  .btnrow{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+  .btn{flex:1 1 auto; border:none; border-radius:10px; padding:10px 14px; font-family:inherit; font-size:14px; cursor:pointer; background:var(--accent); color:#fff; letter-spacing:1px;}
+  .btn.ghost{background:#fff; color:var(--accent2); border:1px solid var(--accent2);}
+  .btn.small{padding:7px 12px; font-size:12.5px; flex:0 0 auto; background:#fff; color:var(--ink2); border:1px solid var(--line);}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  .out .toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .storycard{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:30px 34px; min-height:260px;}
+  .storycard .stitle{font-size:24px; text-align:center; letter-spacing:4px; margin-bottom:6px;}
+  .storycard .smeta{text-align:center; font-size:12px; color:var(--ink2); margin-bottom:18px; letter-spacing:1px;}
+  .storycard .sbody p{text-indent:2em; font-size:15.5px; margin-bottom:12px; text-align:justify;}
+  .storycard .sbody p.first::first-letter{font-size:32px; float:left; line-height:1.15; margin:2px 8px 0 0; color:var(--accent); font-weight:700;}
+  .placeholder{color:#B5A99A; text-align:center; padding:80px 0; font-size:14px;}
+  .note{margin-top:14px; background:#F1F4F8; border-left:3px solid var(--accent2); border-radius:0 10px 10px 0; padding:12px 16px; font-size:13px; color:#46505C; line-height:1.8;}
+  .note b{color:var(--accent2);}
+  .hist{display:flex; flex-direction:column; gap:10px; margin-top:14px;}
+  .hist .item{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:13px;}
+  .hist .item .t{color:var(--ink); font-weight:600;}
+  .hist .item .m{color:var(--ink2); font-size:12px;}
+  .hist .item .btn{flex:0 0 auto;}
+  .foot{margin-top:34px; text-align:center; color:var(--ink2); font-size:12px; border-top:1px solid var(--line); padding-top:16px; letter-spacing:1px;}
+  @media (max-width:640px){
+    .wrap{padding:0 14px;}
+    .storycard{padding:20px 16px;}
+    header h1{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>墨染 · 小说生成器</h1>
+    <div class="sub">模板库 × 风格库 · 本地规则引擎出稿 · 无需后端</div>
+  </header>
+
+  <div class="main">
+    <!-- 设置面板 -->
+    <div class="panel">
+      <h2>设定输入</h2>
+
+      <div class="field">
+        <label><b>题材模板</b></label>
+        <select id="genre">
+          <option value="言情">言情</option>
+          <option value="耽美">耽美</option>
+          <option value="百合">百合</option>
+          <option value="悬疑">悬疑</option>
+          <option value="玄幻">玄幻</option>
+          <option value="快穿">快穿</option>
+          <option value="无限流">无限流</option>
+          <option value="年代文">年代文</option>
+          <option value="电竞">电竞</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label><b>文笔风格</b>（可多选，第一个为主风格）</label>
+        <div class="chips" id="styleChips">
+          <label><input type="checkbox" value="古风典雅" checked>古风典雅</label>
+          <label><input type="checkbox" value="都市冷冽">都市冷冽</label>
+          <label><input type="checkbox" value="文艺细腻">文艺细腻</label>
+          <label><input type="checkbox" value="爽文快节奏">爽文快节奏</label>
+          <label><input type="checkbox" value="悬疑克制">悬疑克制</label>
+          <label><input type="checkbox" value="民国腔">民国腔</label>
+          <label><input type="checkbox" value="治愈系">治愈系</label>
+          <label><input type="checkbox" value="意识流">意识流</label>
+          <label><input type="checkbox" value="热血少年">热血少年</label>
+          <label><input type="checkbox" value="科幻冷峻">科幻冷峻</label>
+          <label><input type="checkbox" value="轻喜剧">轻喜剧</label>
+          <label><input type="checkbox" value="暗黑哥特">暗黑哥特</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label><b>篇幅</b></label>
+        <select id="len">
+          <option value="micro">微小说（约 300–500 字）</option>
+          <option value="short" selected>短篇（约 800–1200 字）</option>
+          <option value="mid">中篇（约 1500–2500 字）</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label><b>世界观 / 背景</b></label>
+        <textarea id="world" placeholder="例：古风侯门 / 现代都市 / 星际时代……"></textarea>
+      </div>
+
+      <div class="field">
+        <label><b>主角 A 人设</b></label>
+        <input type="text" id="heroA" placeholder="例：沈砚，侯门庶子，冷峻隐忍">
+      </div>
+
+      <div class="field">
+        <label><b>主角 B 人设</b></label>
+        <input type="text" id="heroB" placeholder="例：谢孤鸿，江湖剑客，炽热直白">
+      </div>
+
+      <div class="field">
+        <label><b>核心冲突</b></label>
+        <input type="text" id="conflict" placeholder="例：家族利益与自由的两难">
+      </div>
+
+      <div class="field">
+        <label><b>可选桥段</b>（勾选后写进故事）</label>
+        <div class="chips" id="tropeChips">
+          <label><input type="checkbox" value="初见">初见</label>
+          <label><input type="checkbox" value="雨夜">雨夜</label>
+          <label><input type="checkbox" value="误会">误会</label>
+          <label><input type="checkbox" value="告白">告白</label>
+          <label><input type="checkbox" value="破镜重圆">破镜重圆</label>
+          <label><input type="checkbox" value="宿敌相救">宿敌相救</label>
+          <label><input type="checkbox" value="共伞">共伞</label>
+          <label><input type="checkbox" value="旧信">旧信</label>
+          <label><input type="checkbox" value="替身">替身</label>
+          <label><input type="checkbox" value="金手指">金手指</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label><b>补充要求</b>（可选）</label>
+        <textarea id="extra" placeholder="例：想要一个反转结尾 / BE 或 HE"></textarea>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn" id="genBtn">生成文章</button>
+        <button class="btn ghost" id="copyBtn">复制创作指令</button>
+      </div>
+    </div>
+
+    <!-- 输出区 -->
+    <div class="out">
+      <div class="toolbar">
+        <button class="btn small" id="againBtn">换风格重出</button>
+        <button class="btn small" id="regBtn">换题材重出</button>
+        <button class="btn small" id="contBtn">续写一段</button>
+        <button class="btn small" id="saveBtn">存入版本库</button>
+      </div>
+
+      <div class="storycard" id="storycard">
+        <div class="placeholder">在左侧设定题材、风格与人物，点击「生成文章」—— 一篇按模板骨架与风格笔法组合的初稿会出现在这里。</div>
+      </div>
+
+      <div class="note" id="engineNote" style="display:none;">
+        <b>生成说明：</b>本页为<b>本地规则引擎初稿</b>（无需后端即可运行），用于快速成型与结构预览，文字为程序按模板与风格素材组合生成。需要高级文学质感时，点击「复制创作指令」，把设定发给我精写。
+      </div>
+
+      <div class="hist" id="hist" style="display:none;">
+        <div style="font-size:13px;color:var(--ink2);letter-spacing:1px;">版本库（多版本对比）</div>
+        <div id="histList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">墨染 · 小说生成器 · 静态版 · 内置 9 套题材模板 × 12 种文笔风格</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ 素材库 ============ */
+
+  var GENRES = {
+    "言情": {
+      title: ["偏偏心动","旧时光与你","一念之差","遇见你之后","此生共你"],
+      beats: [
+        { label:"相遇·钩子", lines:[
+          "{world}里，{A}第一次注意到{B}，是在{trope}的场合。他原以为这只是寻常一面——直到发现自己的目光，再也挪不开了。",
+          "{conflict}。这是{A}和{B}之间绕不开的结。偏偏老天还嫌不够，让他们在{trope}里又撞到了一起。"
+        ]},
+        { label:"试探·拉扯", lines:[
+          "{A}开始有意无意地靠近{B}。{B}退一步，他就近一步；{B}冷一句，他就热一句。两个人谁也不肯先承认，心跳却早就出卖了自己。",
+          "深夜独处时，{A}忽然问起那个谁都不愿碰的话题。{B}沉默了很久，答非所问：“你管这么多做什么？”语气是冷的，耳朵尖却红了。"
+        ]},
+        { label:"危机·转折", lines:[
+          "转折发生在{trope}那天。{conflict}被彻底摆上台面，{A}不得不做选择——是守住自己的立场，还是守住{B}。",
+          "他把所有退路都封死了，唯独给{B}留了一扇门。可{B}站在门外，红着眼眶问：“值得吗？”他没有犹豫：“你问的这句话，就是答案。”"
+        ]},
+        { label:"和解·顶点", lines:[
+          "雨停的时候，{A}终于说了实话：“我认输。”{B}愣了很久，忽然笑了：“那你要记得，这一局，是你先动的心。”",
+          "两个人都没有再多说什么。有些话，说一次就够重了；有些情，认了就是一辈子。"
+        ]}
+      ],
+      ending: ["多年以后有人问起这段故事，{A}只说了两个字：值得。","从此，{world}里再也没有人能把他们分开了。"],
+      tropeNote: "本稿推进了「相遇→试探→危机→和解」完整骨架"
+    },
+    "耽美": {
+      title: ["与君书","此生不换","并肩","孤鸿","雪落无声"],
+      beats: [
+        { label:"宿敌·初见", lines:[
+          "{A}遇见{B}那日，{world}正乱。所有人都以为他们是对头，只有{A}自己知道，第一眼起，他就想护住这个人。",
+          "{conflict}。{A}不信命，{B}不信人。可当他们被命运捆在同一根绳上，谁也没能先松手。"
+        ]},
+        { label:"同盟·并肩", lines:[
+          "一场变故让两人不得不并肩。{B}嘴上说着“各取所需”，却在{trope}时下意识挡在{A}身前。{A}看在眼里，没有拆穿。",
+          "刀光剑影过后，两个人背靠着背坐在廊下。{B}低声道：“方才那一刀，你可以不挡。”{A}答：“可我想挡。”"
+        ]},
+        { label:"试探·羁绊", lines:[
+          "深夜对坐，酒过三巡。{B}忽然问：“你为什么对我这么好？”{A}看着他的眼睛：“因为你是第一个，没把我当棋子的人。”",
+          "{conflict}的真相揭开那天，{B}才知道，{A}为他挡下的远不止那一刀。旧伤结痂，新仇已了，可有些账，这辈子都还不清了。"
+        ]},
+        { label:"认定·同行", lines:[
+          "“跟我走。”{A}说。{B}沉默了很久，解下腰间旧物递过去：“那，这条命，以后归你。”",
+          "千山暮雪，两人一前一后走进夜色。没有人回头，因为从这一刻起，他们要去的，是同一个方向。"
+        ]}
+      ],
+      ending: ["此后江湖提起这对名字，总说“形影不离”。只有他们自己知道，那不是传闻，是誓言。","{B}后来总说，当初那句“跟我走”，是他这一生听过最好听的话。"],
+      tropeNote: "本稿推进了「宿敌→同盟→试探→羁绊→认定」骨架"
+    },
+    "百合": {
+      title: ["绿萝","共伞","数叶子的人","她的名字","暮色正落"],
+      beats: [
+        { label:"目光交错", lines:[
+          "{A}第一次见{B}，是在{trope}的场景里。{B}没有回头，可{A}记住了她低头时的那一缕发。",
+          "后来{A}总来。{world}里那些别人不在意、她们却当成宝贝的细节，她们聊了很久很久。"
+        ]},
+        { label:"细碎日常", lines:[
+          "{B}记得{A}爱喝什么，记得她来的时候带着什么样的气息，记得下雨天她不爱打伞。{A}也记得{B}怕什么、为什么事笑、为什么事沉默。",
+          "她们聊过很多：聊一棵树被台风连根拔起，聊一杯咖啡凉透的温度，聊彼此为什么离开了原来的地方。"
+        ]},
+        { label:"彼此试探", lines:[
+          "那天{B}说：“你对我，好像有点太好。”{A}没有否认，只说：“我想对你更好，可以吗？”",
+          "这句话说出来之后，两个人都安静了很久。窗外的暮色一点点沉下去，像谁的心事，终于肯落地。"
+        ]},
+        { label:"坚定相守", lines:[
+          "{conflict}袭来时，{B}先想到的不是自己，是别让{A}为难。可{A}已经站到她身前：“这一次，换我来。”",
+          "“从今以后，我申请一直待在你身边。”{B}笑着红了眼眶：“批准了。”"
+        ]}
+      ],
+      ending: ["此后每个雨天，她们共一把伞。伞不大，刚刚好装下两个人，和她们慢慢长出来的余生。","{A}把那株救活的花放进窗台，说：“你看，它活过来了。”{B}看着她，轻声说：“嗯，我们都活过来了。”"],
+      tropeNote: "本稿推进了「目光交错→细碎日常→彼此试探→坚定相守」骨架"
+    },
+    "悬疑": {
+      title: ["暗号","第七次回头","证词之外","雨夜笔录","她没说过"],
+      beats: [
+        { label:"案发·嫌疑", lines:[
+          "{trope}发生的那个夜晚，{world}里所有人都说{B}有嫌疑。只有{A}在卷宗角落发现一行小字——那是只有{B}才懂的暗号。",
+          "审讯室的灯亮了一整夜。{A}坐在{B}对面，一遍遍问同一个问题。{B}始终沉默，只是目光落在{A}的笔尖上，像在等什么。"
+        ]},
+        { label:"追查·不信", lines:[
+          "{A}没有按流程定罪。他开始自己查——查现场、查时间、查每一个声称见过{B}的人。越查，疑点越多；疑点越多，他越确定：有人在说谎。",
+          "{conflict}悬在头顶。同僚劝{A}别趟这浑水，他答：“证据说她是清白的，我就信证据。”"
+        ]},
+        { label:"反转·真相", lines:[
+          "门再次打开时，{B}忽然笑了：“你查得没错，人是我带走的——因为真正的凶手，正坐在你身后。”",
+          "真相大白那晚，{A}问：“你为什么不解释？”{B}说：“因为我相信，你会自己查清楚，然后选择相信我。”"
+        ]}
+      ],
+      ending: ["档案封存那天，{A}在结案报告最后一页写道：本案的真相，不在证词里，在信任里。","多年后{B}再问起那晚，{A}只说了四个字：“幸好是你。”"],
+      tropeNote: "本稿推进了「命案→嫌疑→反转→真相×情感双落点」骨架"
+    },
+    "玄幻": {
+      title: ["蛰龙","废柴逆袭","一剑霜寒","我自登天","旧物藏锋"],
+      beats: [
+        { label:"废柴·开局", lines:[
+          "{A}在{world}里是人尽皆知的废物。灵根尽废那日，没人知道，他捡到的那枚破戒指里，住着上古残魂。",
+          "{conflict}压在肩头，同门嗤笑，家族冷眼。{A}把所有人嘲讽记在心里，面上却只说了句：“谢各位今日看得起。”"
+        ]},
+        { label:"奇遇·成长", lines:[
+          "残魂传他心法，也传他一句真言：真正的强者，从不在顺境里诞生。于是寒来暑往，{A}在无人问津的角落里，一寸一寸地重新长出骨头。",
+          "第一次出手时，满座皆惊。{A}没有解释，只是看向{B}站的方向——那里，有人在所有人嘲笑他时，递过一碗热饭。"
+        ]},
+        { label:"打脸·扬名", lines:[
+          "宗门大比，满座哗然。曾经踩过{A}的人此刻脸色铁青——他们这才明白，{A}不是废物，是蛰伏的龙。",
+          "“我从不记仇，”{A}拂袖而过，“但你们记住：当年递给我一碗热饭的人，今日起，由我护着。”"
+        ]},
+        { label:"登顶·相伴", lines:[
+          "登顶那日，{A}站在山巅，忽然想起最初那句嘲讽。他没有记恨，只把旧事碾作尘土，笑着对{B}说：“走吧，上面的风景，比他们想象的还要好。”",
+          "{world}的传说从这一日起改写。而传说里最动人的一笔，从来不是他登了多高——是他始终带着当初那碗热饭的暖意。"
+        ]}
+      ],
+      ending: ["后来有人问{A}，一路走来最想谢谁。他想了很久，说：“谢那个在我最落魄时，没有嘲笑我的人。”","自此，{world}多了一段传奇，也多了一双并肩的背影。"],
+      tropeNote: "本稿推进了「废柴→奇遇→打脸→登顶」骨架"
+    },
+    "快穿": {
+      title: ["第一千个世界","攻略失败","宿主","穿来穿去","这次不走"],
+      beats: [
+        { label:"绑定·入世", lines:[
+          "{A}醒来时，{world}的提示音还在耳边：“任务世界载入完毕，请宿主尽快进入角色。”他低头看了看自己这具身体——好吧，又是从零开始。",
+          "系统说，通关条件是{trope}。可{A}在这个世界遇见的第一个人就是{B}——系统没有告诉他，这个人，会是他所有任务里唯一的变数。"
+        ]},
+        { label:"任务·拉扯", lines:[
+          "{A}按着系统给的剧本靠近{B}，却在一次次相处里越来越不像在演戏。{B}会在他装病时真的煮粥，会在他按剧本说“再见”时沉默很久。",
+          "“你是不是在演我？”{B}忽然问。{A}心跳漏了一拍，嘴上却说：“剧本上没这句。”{B}盯着他看了很久，笑了：“那这句，是我即兴加的。”"
+        ]},
+        { label:"危机·揭穿", lines:[
+          "{conflict}把任务推到死角。系统开始倒计时：任务失败，将强制脱离本世界。{A}第一次犹豫了——他舍不得这个“剧本之外”的人。",
+          "{B}知道了真相。没有愤怒，只是问：“如果我不是任务，你还会留下吗？”"
+        ]},
+        { label:"抉择·留下", lines:[
+          "{A}关掉了系统提示音。“任务失败。”他说，“我选择，留在这个世界。”",
+          "系统沉寂了很久，最后弹出一行字：任务失败，判定通过。{B}问为什么。{A}笑了笑：“因为你比任何剧本，都真实。”"
+        ]}
+      ],
+      ending: ["此后{world}再也没有出现过新的任务者。有人说，他在那个世界，过完了很好的一生。","系统档案里记录着唯一一次“任务失败”：原因栏只写了四个字——不愿离开。"],
+      tropeNote: "本稿推进了「绑定任务→入世拉扯→身份揭穿→选择留下」骨架"
+    },
+    "无限流": {
+      title: ["第七号副本","规则之外","门开了","幸存者","下一局"],
+      beats: [
+        { label:"进入副本", lines:[
+          "门开的那一刻，{A}听见{world}在身后合拢。副本提示浮现：规则一，天黑后不要点灯；规则二，如果有人叫你的名字，不要回头。{A}数了数身边的队友——多了一个。",
+          "第一次副本，{A}和{B}被分在同一组。{B}在所有人慌乱时，冷静地记下每一条规则，然后递给他一块糖：“吃点甜的，脑子转得快。”"
+        ]},
+        { label:"规则·结盟", lines:[
+          "他们在副本里结盟。{B}负责推理，{A}负责冲在前面——一个敢想，一个敢做，居然把必死的局盘活了。",
+          "深夜守夜时，{B}问：“你为什么信我？”{A}想了想：“因为{trope}那天，所有人都往后退，只有你，往我这边走了一步。”"
+        ]},
+        { label:"生死·考验", lines:[
+          "{conflict}让副本提前进入死局。规则被一条条打破，队友一个个消失。{A}攥着{B}的手，第一次觉得：通关不重要了，重要的是带他出去。",
+          "最后一道门前，{B}停下脚步：“你先走。”{A}头也不回地把他拽回来：“要走一起走。这局要是过不去，下局我还陪你开。”"
+        ]},
+        { label:"通关·同归", lines:[
+          "门开了。阳光涌进来的瞬间，{A}才发现自己浑身是伤，却一直在笑。{B}站在他身边，问：“下一局，还一起吗？”",
+          "“下一局，下下局，”{A}说，“我都在。”副本结算的声音响起，系统判定：本局，全员通关。"
+        ]}
+      ],
+      ending: ["后来他们成了副本里最有名的组合。只有他们自己知道，最难的副本从来不是门后面的那些——是门打开之后，还愿意陪着你的人。","系统日志最后一页写着：队伍存活，全员；羁绊值，溢出。"],
+      tropeNote: "本稿推进了「进入副本→规则摸索→生死考验→通关同归」骨架"
+    },
+    "年代文": {
+      title: ["那年夏天","大院里","粮票","绿皮火车","晚风吹过那年"],
+      beats: [
+        { label:"时代·初遇", lines:[
+          "{world}的夏天，蝉鸣把巷子拉得很长。{A}第一次见{B}，是骑着二八大杠，车筐里装着半筐绿豆冰棍——{B}站在大门口，看着他把车刹住，问：“新来的？”",
+          "那个年代的感情，是从借一本书开始的。{A}借给{B}一本《围城》，还回来时里面夹着一片梧桐叶，叶脉上写着一行小字：“书里这句话，像你。”"
+        ]},
+        { label:"日子·细水长流", lines:[
+          "日子过得慢。粮票、煤炉、单位大院的广播。{A}和{B}隔着一条街谈恋爱，一周见一次，写信要寄两天。可就是这样慢的日子，他们谁也没觉得浪费。",
+          "{B}后来回忆说，那时候最幸福的时刻，是{trope}那天傍晚，{A}推着车陪她走完一整条街，路灯亮起来，他们谁都没舍得先到家。"
+        ]},
+        { label:"变故·时代洪流", lines:[
+          "{conflict}像那年的第一场大雪，一夜之间压了下来。{A}要去很远的地方，归期未定。站台上，{B}把织好的围巾系到他脖子上，只说了一句：“我等你。”",
+          "那些年，信成了唯一的牵绊。{A}在信里写见闻，{B}在回信里写家常。没有一句“想你”，可每一句，都是“想你”。"
+        ]},
+        { label:"重逢·相守", lines:[
+          "多年以后，{A}站在当年的站台上。人潮散去，{B}还是老样子，站在同一个位置，围巾已经旧了，却一直没换。",
+          "“我说过我等你。”{B}说。{A}走上前，把她的手拢进掌心：“那以后的路，我一步都不迟到。”"
+        ]}
+      ],
+      ending: ["后来他们的故事，被巷子里的老人们讲了很多年。讲到结尾，总是一句：真好，最后还是在一起了。","时代把很多东西冲走了，唯独没有冲走他们攥在一起的手。"],
+      tropeNote: "本稿推进了「时代初遇→细水长流→时代洪流→重逢相守」骨架"
+    },
+    "电竞": {
+      title: ["决胜局","ADC与辅助","五连绝世","中单队长","夺冠那天"],
+      beats: [
+        { label:"相遇·组队", lines:[
+          "训练室的空调嗡嗡响。{A}走进门时，{B}正盯着屏幕复盘，头也不抬：“上赛季的冠军中单，怎么来我们这破队试训？”{A}拉开椅子坐下：“因为你说过，辅助才是团队的灵魂。我想看看，灵魂长什么样。”",
+          "第一次双排，{B}的辅助像长了眼睛一样，总在{A}最需要的时候出现。{A}打完那把，转头问：“你以前辅助过谁？”{B}：“没有。你是第一个，我想保的人。”"
+        ]},
+        { label:"磨合·胜负", lines:[
+          "他们开始日复一日地训练。输了一起复盘到深夜，赢了一起去吃凌晨的路边摊。{B}嘴上毒，手却最稳——{A}冲动的每一波，他都兜得住。",
+          "关键局被让二追三那天，全队沉默。{A}摔了耳机，{B}却捡起来递给他：“哭什么，下一把，我给你打回来。”"
+        ]},
+        { label:"危机·扛压", lines:[
+          "{conflict}把队伍推到风口浪尖。转会传闻、伤病、铺天盖地的质疑。{A}第一次在镜头前失控，{B}在所有人面前站到他身边：“输赢一起扛，这话不是采访稿，是真的。”",
+          "封闭训练的日子，{B}每天在{A}的桌上放一杯他爱喝的奶茶，纸条上写着：别怕，我还在。"
+        ]},
+        { label:"夺冠·约定", lines:[
+          "总决赛第五局，五对四。{B}的辅助残血不退，硬生生为{A}开出完美团战。水晶爆炸的那一刻，全世界的欢呼涌过来，{A}却只看着{B}：“赢了。”",
+          "{B}摘下耳机，笑着说：“那约好了——明年，还一起打。”台下是山呼海啸，台上是他们的约定，比奖杯还亮。"
+        ]}
+      ],
+      ending: ["后来他们拿了不止一个冠军。可每一个采访，{A}说的都是同一句话：“我的最佳搭档，永远是他。”","电竞圈后来有个传说：中单和辅助，一个敢秀，一个敢保，从青训一直打到了传奇。而这个传说，还没完结。"],
+      tropeNote: "本稿推进了「相遇组队→磨合胜负→危机扛压→夺冠约定」骨架"
+    }
+  };
+
+  var STYLES = {
+    "古风典雅": {
+      flavor: ["灯下茶烟袅袅，{A}抬眼望去，来人风尘仆仆，眉目如旧。","四目相对时，满室皆静，唯余窗外雪声簌簌。","他执盏的手停在半空，千言万语，凝作一句。","自此，两人之间便多了些说不清、道不明的东西。"],
+      close: ["窗外雪正落，恰似当年。","旧诺如山，终得践。"]
+    },
+    "都市冷冽": {
+      flavor: ["霓虹在下雨。{A}站在楼下，烟头明灭，像他这些年没说出口的话。","电梯门开合的间隙，他看见{B}。隔着整条走廊，像隔着一整条江。","话到嘴边，又咽回去。成年人的心动，从来不动声色。","这座城市很大，大到擦肩就是永别；也很小，小到他们总能撞见彼此。"],
+      close: ["夜色收走最后一点光。他们谁都没说话，却谁也没先走。","后来这座城市换了霓虹，他还是记得那晚的雨。"]
+    },
+    "文艺细腻": {
+      flavor: ["雨把整座城市泡成一张旧照片。{A}坐在窗边，杯沿的水汽一点点漫上来，像心事。","空气里有潮湿的、植物的气息。{A}忽然想起很久以前的一个下午，阳光正好。","她说话的时候，声音很轻，像怕惊动什么——像怕惊动自己心里那只困了很久的鸟。","有些话没说出口，却在眼睛里说了千遍。"],
+      close: ["暮色正落，灯一盏盏亮起来。他们都听见了彼此心里那句话，落地的声音。","窗台上的花又开了一朵。这一次，有人陪着一起看。"]
+    },
+    "爽文快节奏": {
+      flavor: ["三年了。{B}站在门口，身价百亿，眼底却还是当年那点光。","“晚了。”{A}头也没抬。可下一秒，他把一份东西推到{B}面前——“我等你，等了三年。”","全场哗然。所有人都在等一个反转，而{A}从来不会让人失望。","你以为这是终点？不，这只是开场。"],
+      close: ["后来圈子里流传一句话：别惹{A}——尤其是当他身边站着{B}的时候。","故事到这里远没有结束，但所有人都知道：从今天起，没人再敢小看他们。"]
+    },
+    "悬疑克制": {
+      flavor: ["这是{A}第三次在同一个街角看见{B}。猫叫了第四声——他数过。","细节。全是细节。{A}把每一个异常记在纸上，像拼一块还没有成形的图。","越平静，越惊心。{B}越是若无其事，{A}越确定事情没有那么简单。","他没有拆穿，只是把那条线索收进袖口，等着它自己开口。"],
+      close: ["真相落定那晚，{A}在笔记最后一页写了四个字：幸好是你。","有些谜题解开了，有些谜题，他们决定永远不再提起。"]
+    },
+    "民国腔": {
+      flavor: ["电车叮当驶过街角，梧桐叶落了一地。{A}立在老照相馆门口，风衣口袋里还揣着那年没能递出去的信。","黄昏的弄堂里飘着留声机的曲子，咿咿呀呀，像谁的心事绕了三圈又回来。","{A}吸了一口烟，慢慢说：“乱世里头，能守住一个人，就算赢了。”","月亮升起来的时候，他们并肩走过石库门。谁也没开口，可脚步声，是齐的。"],
+      close: ["许多年后，有人在那条街上见过两张旧照片。照片里的人，隔着时光，还在笑。","故人老去，书信泛黄，唯有那年夏天的风，吹到今天。"]
+    },
+    "治愈系": {
+      flavor: ["阳光从窗帘缝里漏进来，在桌上铺成一条暖暖的河。{A}把粥盛好，推给{B}，什么也没说。","日子就是这样一点点好起来的：换一盆新的花，修一盏不亮的灯，给心里的人多留一碗饭。","{B}后来想，所谓被治愈，大概就是有人记得她不爱吃苦瓜，还记得她怕黑。","风穿过晾衣绳上的白衬衫，带着肥皂的香气。{A}忽然觉得，这样平凡的下午，就是最好的下午。"],
+      close: ["往后的每一天都是普通的一天，可因为有人陪着，每一件小事都值得庆祝。","他们把日子过成了慢镜头，一帧一帧，都是温柔的。"]
+    },
+    "意识流": {
+      flavor: ["记忆像水一样漫上来。{A}忽然想起很久以前——不对，是昨天，还是十年前？他分不清了，只记得{B}的眼睛。","钟摆停了。或者说，时间从来没走过，只是他们在时间里各自老去了一点点。","她心里有一整座剧场，灯一盏盏亮起，演的永远都是同一幕：{B}回过头，对她笑。","话说到一半就断了。不是因为沉默，是因为那句话在他心里绕了太多年，已经辨不清最初的形状。"],
+      close: ["后来他常常分不清回忆和现实。唯一确定的是，无论在哪一段里，{B}都在。","很多年后，当{A}再一次听见那首歌，忽然明白：有些话没说出口，原来也是一种天长地久。"]
+    },
+    "热血少年": {
+      flavor: ["“再来一次！”{A}从地上爬起来，抹掉嘴角的血，眼睛亮得吓人。“我答应过要保护的人，还站在我身后呢。”","裁判席炸了，全场炸了，连空气都烧起来了。{A}站在风暴中心，笑得张扬：“都说了，我不会输。”","没有人看好他们。可那又怎样？{A}和{B}对视一眼，同时笑了——他们从来就不是为了被看好才站在这里的。","汗水砸在地上，一秒钟比一秒钟烫。{A}想，所谓热血，大概就是明知会输，也要拼尽全力地赢给你看。"],
+      close: ["故事没有结束。因为他们的青春，从来就不是拿来结尾的。","多年后回看那天，{A}还是觉得，那是他人生里最燃的一天——不是因为赢了，是因为{B}站在他身边，从没离开过。"]
+    },
+    "科幻冷峻": {
+      flavor: ["城市的全息屏一盏接一盏熄灭，{A}站在停机坪边缘，通讯频道里只剩下{B}的呼吸声——断断续续，却一直没有停。","系统提示音说：轨道偏离。{A}却知道，偏的不是轨道，是他自己。从那天见到{B}起，他的计算器就再也算不对概率。","冷冻舱开启时，雾气里走出一个人。{A}隔着十年的光和尘，轻声说：“欢迎回来。”","数据流瀑布一样划过舱壁。{A}在代码的最深处，藏了一行只有{B}能读懂的注释——那是这个时代最接近情书的东西。"],
+      close: ["飞船越过最后一个中转站。{A}在日志里写下：目标坐标确认，目的地：你身边。","星图更新那天，他们为那颗新发现的星星命名。用的，是彼此的名字。"]
+    },
+    "轻喜剧": {
+      flavor: ["{A}第三次“偶遇”{B}时，终于被本人抓包：“说吧，你家楼下是不是也是这家店？”{A}面不改色：“缘分，懂吗，这叫缘分。”","两个人第一次约会，{A}紧张到把盐当成糖，倒进了{B}的咖啡里。{B}喝了一口，沉默了五秒：“……你是在用这种方式证明你纯情吗？”","“我警告你，”{B}举着勺子说，“再往我碗里夹菜，我就把你上次哭鼻子的照片发群里。”{A}立刻正襟危坐：“我错了。”","全天下都看得出来他们互相喜欢，只有他们自己还在演“我们只是好朋友”。演技一流，就是观众不买账。"],
+      close: ["后来朋友们一致决定：这两人能在一起，全靠围观群众的不懈努力。","他们的故事没什么惊天动地，就是吵吵闹闹，然后一不小心，就吵吵闹闹了一辈子。"]
+    },
+    "暗黑哥特": {
+      flavor: ["古堡的钟敲过十二下，{A}的指尖拂过尘封的琴键。有人说这座宅子闹鬼，他知道，鬼不在宅子里，在{B}的眼睛里。","玫瑰开在黑夜里，带着血一样的红。{A}把刺一根根拔掉，递到{B}面前：“你看，为你，我可以变成不伤人的人。”","他们之间的每一次靠近，都像在刀尖上跳舞。可谁也没想过退后——疼痛，原来也可以上瘾。","月光把影子拉得很长。{A}想，如果爱是深渊，那他大概早就自愿沉底了。"],
+      close: ["故事落幕时，天还没有亮。他们并肩坐在台阶上，等着永远不会来的日出——却很满足。","世人说他们疯狂。只有他们知道，那不过是把爱，爱到了极致。"]
+    }
+  };
+
+  /* ============ 工具函数 ============ */
+
+  function pick(arr, rnd){ return arr[Math.floor(rnd()*arr.length)]; }
+  function rnd(){ return Math.random(); }
+  function rndInt(n){ return Math.floor(rnd()*n); }
+  function nameOf(s){ return s ? s.split(/[，,、]/)[0].trim() : ""; }
+
+  function fill(tpl, d){
+    return tpl
+      .replace(/\{A\}/g, d.A || "他")
+      .replace(/\{B\}/g, d.B || "她")
+      .replace(/\{world\}/g, d.world || "这座城市")
+      .replace(/\{conflict\}/g, d.conflict || "一段说不清道不明的过往")
+      .replace(/\{trope\}/g, d.trope || "寻常");
+  }
+
+  function collectChips(id){
+    var out=[];
+    var labels=document.querySelectorAll("#"+id+" input:checked");
+    for(var i=0;i<labels.length;i++){ out.push(labels[i].value); }
+    return out;
+  }
+
+  /* ============ 生成引擎 ============ */
+
+  function buildStory(opts){
+    var genre=GENRES[opts.genre]||GENRES["言情"];
+    var styles=opts.styles.length?opts.styles:["古风典雅"];
+    var primary=STYLES[styles[0]]||STYLES["古风典雅"];
+    var secondary=styles.length>1?(STYLES[styles[1]]||null):null;
+    var d={
+      A: nameOf(opts.heroA) || opts.heroA || "他",
+      B: nameOf(opts.heroB) || opts.heroB || "她",
+      world: opts.world||"这座城市",
+      conflict: opts.conflict||"一段说不清道不明的过往",
+      trope: opts.tropes.length?opts.tropes.join("、"):"寻常"
+    };
+    var paras=[];
+    var usedBeats=[];
+
+    // 开篇：风格句 + 钩子
+    if(rnd()<0.8){ paras.push(fill(pick(primary.flavor,rnd),d)); }
+    var hook=fill(pick(genre.beats[0].lines,rnd),d);
+    paras.push(hook);
+    usedBeats.push(genre.beats[0].label);
+
+    // 主体：按篇幅决定每幕句数
+    var perBeat = opts.len==="micro" ? 1 : (opts.len==="short" ? 2 : 3);
+    for(var b=1;b<genre.beats.length;b++){
+      var beat=genre.beats[b];
+      var n=Math.min(perBeat, beat.lines.length);
+      for(var k=0;k<n;k++){
+        var line = k===0 ? fill(pick(beat.lines,rnd),d) : fill(beat.lines[(rndInt(beat.lines.length))],d);
+        paras.push(line);
+        // 每幕穿插主风格句
+        if(rnd()<0.5){ paras.push(fill(pick(primary.flavor,rnd),d)); }
+        if(secondary && rnd()<0.35){ paras.push(fill(pick(secondary.flavor,rnd),d)); }
+      }
+      usedBeats.push(beat.label);
+    }
+
+    // 收尾
+    if(rnd()<0.7){ paras.push(fill(pick(primary.close,rnd),d)); }
+    paras.push(fill(pick(genre.ending,rnd),d));
+
+    // 补充要求注入（若写了“反转/HE/BE”等）
+    if(opts.extra && /反转/i.test(opts.extra)){
+      paras.splice(paras.length-1, 0, fill("“其实有一件事，我从头到尾都没有告诉你。”{B}说。{A}静静听完，忽然笑了：“巧了，我也藏了一件。”——两个人相视一笑，谜底在这一刻，才算真正揭开。", d));
+    }
+    if(opts.extra && /be|悲剧|结局不好/i.test(opts.extra)){
+      paras.push(fill("多年以后，{A}偶尔还会想起那天。如果时光能重来，他大概还是会做出同样的选择——有些结局，明知道痛，也愿意赴。", d));
+    }
+
+    var title=pick(genre.title,rnd);
+    var meta=opts.genre+" · "+(opts.styles.length?opts.styles.join("+"):"古风典雅")+" · "+(opts.len==="micro"?"微小说":opts.len==="short"?"短篇":"中篇");
+    return { title:title, meta:meta, paras:paras, beats:usedBeats, styles:styles, genreNote:genre.tropeNote };
+  }
+
+  function renderStory(s, first){
+    var card=document.getElementById("storycard");
+    var h='<div class="stitle">'+s.title+'</div>';
+    h+='<div class="smeta">'+s.meta+'</div>';
+    h+='<div class="sbody">';
+    for(var i=0;i<s.paras.length;i++){
+      h+='<p'+(i===0?' class="first"':'')+'>'+s.paras[i]+'</p>';
+    }
+    h+='</div>';
+    h+='<div class="note"><b>模板落点：</b>'+s.genreNote+'——实际用到：'+s.beats.join(" → ")+'。<br><b>风格落点：</b>'+s.styles.join(" + ")+'：'+(s.styles.length>1?"主风格定调、副风格点缀":STYLES[s.styles[0]]?"按该风格的句式与意象成句":'')+'。</div>';
+    card.innerHTML=h;
+    document.getElementById("engineNote").style.display="block";
+  }
+
+  /* ============ 状态与历史 ============ */
+
+  var history=[];
+  var current=null;
+
+  function getOpts(){
+    return {
+      genre: document.getElementById("genre").value,
+      styles: collectChips("styleChips"),
+      len: document.getElementById("len").value,
+      world: document.getElementById("world").value.trim(),
+      heroA: document.getElementById("heroA").value.trim(),
+      heroB: document.getElementById("heroB").value.trim(),
+      conflict: document.getElementById("conflict").value.trim(),
+      tropes: collectChips("tropeChips"),
+      extra: document.getElementById("extra").value.trim()
+    };
+  }
+
+  function generate(opts){
+    if(!opts.styles.length){ alert("请至少选择一种文笔风格"); return; }
+    current=buildStory(opts);
+    renderStory(current);
+  }
+
+  function renderHist(){
+    var list=document.getElementById("histList");
+    var h="";
+    for(var i=0;i<history.length;i++){
+      var it=history[i];
+      h+='<div class="item"><div><div class="t">'+it.title+'</div><div class="m">'+it.meta+'</div></div><button class="btn small" data-i="'+i+'">查看</button></div>';
+    }
+    list.innerHTML=h;
+    document.getElementById("hist").style.display=history.length?"flex":"none";
+    var btns=list.querySelectorAll("button");
+    for(var j=0;j<btns.length;j++){
+      btns[j].addEventListener("click",(function(idx){return function(){ renderStory(history[idx],false); };})(parseInt(btns[j].getAttribute("data-i"),10)));
+    }
+  }
+
+  function copyPrompt(){
+    var o=getOpts();
+    var lines=[
+      "请用以下设定为我写一篇小说：",
+      "题材模板："+o.genre,
+      "文笔风格："+(o.styles.join("、")||"古风典雅"),
+      "篇幅："+({micro:"微小说",short:"短篇",mid:"中篇"}[o.len]),
+      "世界观："+(o.world||"（未填）"),
+      "主角A："+(o.heroA||"（未填）"),
+      "主角B："+(o.heroB||"（未填）"),
+      "核心冲突："+(o.conflict||"（未填）"),
+      "桥段："+(o.tropes.length?o.tropes.join("、"):"（未选）"),
+      "补充要求："+(o.extra||"（无）")
+    ];
+    var ta=document.createElement("textarea");
+    ta.value=lines.join("\n");
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+    alert("创作指令已复制，粘贴到豆包对话中发给我，我来精写全文。");
+  }
+
+  /* ============ 事件绑定 ============ */
+
+  document.getElementById("genBtn").addEventListener("click", function(){ generate(getOpts()); });
+
+  document.getElementById("againBtn").addEventListener("click", function(){
+    if(!current){ return; }
+    var o=getOpts();
+    // 轮换主风格
+    var all=["古风典雅","都市冷冽","文艺细腻","爽文快节奏","悬疑克制","民国腔","治愈系","意识流","热血少年","科幻冷峻","轻喜剧","暗黑哥特"];
+    var cur=o.styles[0];
+    var idx=all.indexOf(cur);
+    o.styles=[all[(idx+1)%all.length]];
+    generate(o);
+  });
+
+  document.getElementById("regBtn").addEventListener("click", function(){
+    var o=getOpts();
+    var all=["言情","耽美","百合","悬疑","玄幻","快穿","无限流","年代文","电竞"];
+    var idx=all.indexOf(o.genre);
+    o.genre=all[(idx+1)%all.length];
+    document.getElementById("genre").value=o.genre;
+    generate(o);
+  });
+
+  document.getElementById("contBtn").addEventListener("click", function(){
+    if(!current){ return; }
+    var o=getOpts();
+    var dd={A:nameOf(o.heroA)||o.heroA||"他",B:nameOf(o.heroB)||o.heroB||"她",world:o.world||"这座城市",conflict:o.conflict||"",trope:o.tropes.length?o.tropes.join("、"):"寻常"};
+    var st=STYLES[current.styles[0]]||STYLES["古风典雅"];
+    current.paras.push(fill("后来……后来发生的事，{A}很少对人提起。他只是偶尔想起{trope}那天，想起{B}看他的那个眼神。{world}照旧运转，可有些东西，从那天起就不一样了。", dd));
+    if(rnd()<0.6){ current.paras.push(fill(pick(st.flavor,rnd), dd)); }
+    renderStory(current);
+  });
+
+  document.getElementById("saveBtn").addEventListener("click", function(){
+    if(!current){ return; }
+    history.push({title:current.title, meta:current.meta, story:current});
+    renderHist();
+  });
+
+  document.getElementById("copyBtn").addEventListener("click", copyPrompt);
+
+  // 桥段/风格 chips 高亮
+  ["styleChips","tropeChips"].forEach(function(id){
+    var box=document.getElementById(id);
+    box.addEventListener("change", function(e){
+      var lab=e.target.closest("label");
+      if(lab){ lab.classList.toggle("on", e.target.checked); }
+    });
+    var labels=box.querySelectorAll("label");
+    for(var i=0;i<labels.length;i++){
+      if(labels[i].querySelector("input").checked){ labels[i].classList.add("on"); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
